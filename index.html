@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 لعبة الأفلام المصرية</title>
+    
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase CDN scripts (قبل app.js) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+
+</head>
+<body>
+    <main class="container py-16" id="app-root">
+        
+        <!-- شاشة الترحيب -->
+        <section id="welcome-screen" class="screen flex flex-col items-center gap-16">
+            <div class="game-logo">
+                <h1>🎬 لعبة الأفلام المصرية</h1>
+                <p>العبوا مع فريقكم واستمتعوا بتمثيل الأفلام المصرية الشهيرة</p>
+            </div>
+            <div class="flex flex-col gap-16" style="max-width:320px;width:100%">
+                <button id="btn-register" class="btn btn--primary btn--lg btn--full-width">تسجيل فريق جديد</button>
+                <button id="btn-login" class="btn btn--secondary btn--lg btn--full-width">تسجيل دخول</button>
+            </div>
+        </section>
+
+        <!-- شاشة تسجيل فريق جديد -->
+        <section id="register-screen" class="screen hidden flex flex-col gap-16" style="max-width:480px;margin:auto">
+            <h2 class="text-center">تسجيل فريق جديد</h2>
+            <form id="register-form" class="flex flex-col gap-16">
+                <div class="form-group">
+                    <label class="form-label" for="register-team-name">اسم الفريق</label>
+                    <input id="register-team-name" type="text" class="form-control" placeholder="مثال: فريق النجوم" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="register-email">البريد الإلكتروني</label>
+                    <input id="register-email" type="email" class="form-control" placeholder="team@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="register-password">كلمة المرور</label>
+                    <input id="register-password" type="password" class="form-control" placeholder="أدخل كلمة مرور قوية" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="register-confirm-password">تأكيد كلمة المرور</label>
+                    <input id="register-confirm-password" type="password" class="form-control" placeholder="أعد كتابة كلمة المرور" required>
+                </div>
+                <button type="submit" class="btn btn--primary btn--lg btn--full-width">إنشاء حساب الفريق</button>
+            </form>
+            <div class="text-center">
+                <a href="#" id="link-to-login" class="link">لديك حساب؟ سجل دخول</a>
+            </div>
+            <button id="back-to-welcome-1" class="btn btn--outline">العودة للبداية</button>
+        </section>
+
+        <!-- شاشة تسجيل الدخول -->
+        <section id="login-screen" class="screen hidden flex flex-col gap-16" style="max-width:480px;margin:auto">
+            <h2 class="text-center">تسجيل دخول الفريق</h2>
+            <form id="login-form" class="flex flex-col gap-16">
+                <div class="form-group">
+                    <label class="form-label" for="login-email">البريد الإلكتروني</label>
+                    <input id="login-email" type="email" class="form-control" placeholder="team@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="login-password">كلمة المرور</label>
+                    <input id="login-password" type="password" class="form-control" placeholder="أدخل كلمة المرور" required>
+                </div>
+                <button type="submit" class="btn btn--primary btn--lg btn--full-width">تسجيل الدخول</button>
+            </form>
+            <div class="text-center">
+                <a href="#" id="forgot-password" class="link">نسيت كلمة المرور؟</a>
+            </div>
+            <div class="text-center">
+                <a href="#" id="link-to-register" class="link">ليس لديك حساب؟ سجل فريق جديد</a>
+            </div>
+            <button id="back-to-welcome-2" class="btn btn--outline">العودة للبداية</button>
+        </section>
+
+        <!-- لوحة تحكم الفريق -->
+        <section id="dashboard-screen" class="screen hidden flex flex-col gap-16">
+            <div class="dashboard-header card">
+                <div class="card__body flex justify-between items-center">
+                    <div>
+                        <h2 id="team-welcome">أهلاً بكم</h2>
+                        <p id="team-email" class="text-secondary"></p>
+                    </div>
+                    <button id="btn-logout" class="btn btn--outline">تسجيل خروج</button>
+                </div>
+            </div>
+            
+            <div class="dashboard-actions flex flex-col gap-16" style="max-width:480px;margin:auto;width:100%">
+                <button id="btn-manage-movies" class="btn btn--secondary btn--lg btn--full-width">إدارة قائمة الأفلام</button>
+                <button id="btn-new-game" class="btn btn--primary btn--lg btn--full-width">بدء لعبة جديدة</button>
+                
+                <div class="card">
+                    <div class="card__body">
+                        <h3>إحصائياتك</h3>
+                        <div class="stats-grid flex gap-16">
+                            <div class="stat-item flex flex-col items-center">
+                                <span class="stat-number" id="movies-count">0</span>
+                                <span class="stat-label">فيلم</span>
+                            </div>
+                            <div class="stat-item flex flex-col items-center">
+                                <span class="stat-number" id="games-played">0</span>
+                                <span class="stat-label">لعبة</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- إدارة قائمة الأفلام -->
+        <section id="movies-screen" class="screen hidden flex flex-col gap-16" style="max-width:600px;margin:auto">
+            <div class="flex justify-between items-center">
+                <h2>إدارة قائمة الأفلام</h2>
+                <button id="back-to-dashboard-1" class="btn btn--outline">رجوع</button>
+            </div>
+            
+            <div class="card">
+                <div class="card__body">
+                    <p class="mb-8">تحتاج لإعادة إدخال كلمة المرور لتعديل قائمة أفلامك</p>
+                    <div class="form-group">
+                        <label class="form-label" for="movies-password">كلمة المرور</label>
+                        <input id="movies-password" type="password" class="form-control" placeholder="أدخل كلمة المرور">
+                    </div>
+                    <button id="btn-unlock-movies" class="btn btn--primary">فتح قائمة الأفلام</button>
+                </div>
+            </div>
+            
+            <div id="movies-editor" class="hidden">
+                <div class="card">
+                    <div class="card__body">
+                        <div class="flex justify-between items-center mb-8">
+                            <h3>قائمة أفلامك</h3>
+                            <button id="btn-add-movie" class="btn btn--secondary btn--sm">إضافة فيلم</button>
+                        </div>
+                        <div class="form-group">
+                            <input id="new-movie-input" type="text" class="form-control hidden" placeholder="اسم الفيلم الجديد">
+                        </div>
+                        <div id="movies-list" class="movies-list flex flex-col gap-8"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- اختيار وضع اللعبة -->
+        <section id="game-mode-screen" class="screen hidden flex flex-col gap-16" style="max-width:480px;margin:auto">
+            <div class="flex justify-between items-center">
+                <h2>اختر وضع اللعب</h2>
+                <button id="back-to-dashboard-2" class="btn btn--outline">رجوع</button>
+            </div>
+            
+            <div class="game-modes flex flex-col gap-16">
+                <div class="game-mode-card card">
+                    <div class="card__body">
+                        <h3>وضع التحدي بين الفرق</h3>
+                        <p>كل فريق يستخدم قائمة أفلامه الخاصة</p>
+                        <button id="btn-team-challenge" class="btn btn--primary btn--full-width mt-8">اختر هذا الوضع</button>
+                    </div>
+                </div>
+                <div class="game-mode-card card">
+                    <div class="card__body">
+                        <h3>وضع الأفلام العشوائية</h3>
+                        <p>استخدام قاعدة بيانات الأفلام المصرية المدمجة</p>
+                        <button id="btn-random-mode" class="btn btn--secondary btn--full-width mt-8">اختر هذا الوضع</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- إعداد اللعبة -->
+        <section id="game-setup-screen" class="screen hidden flex flex-col gap-16" style="max-width:480px;margin:auto">
+            <div class="flex justify-between items-center">
+                <h2>إعداد اللعبة</h2>
+                <button id="back-to-mode" class="btn btn--outline">رجوع</button>
+            </div>
+            
+            <div class="setup-form flex flex-col gap-16">
+                <div class="form-group">
+                    <label class="form-label" for="game-duration">مدة كل دور (بالدقائق)</label>
+                    <select id="game-duration" class="form-control">
+                        <option value="1">1 دقيقة</option>
+                        <option value="2" selected>2 دقيقة</option>
+                        <option value="3">3 دقائق</option>
+                        <option value="4">4 دقائق</option>
+                        <option value="5">5 دقائق</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="game-rounds">عدد الجولات</label>
+                    <select id="game-rounds" class="form-control">
+                        <option value="5" selected>5 جولات</option>
+                        <option value="6">6 جولات</option>
+                        <option value="7">7 جولات</option>
+                        <option value="8">8 جولات</option>
+                        <option value="9">9 جولات</option>
+                        <option value="10">10 جولات</option>
+                    </select>
+                </div>
+                
+                <div id="team-challenge-setup" class="card hidden">
+                    <div class="card__body">
+                        <h3>انتظار الفريق الآخر</h3>
+                        <p>شارك هذا الرمز مع الفريق الآخر:</p>
+                        <div class="game-code-display">
+                            <code id="game-code">GAME123</code>
+                            <button id="btn-copy-code" class="btn btn--sm btn--outline">نسخ</button>
+                        </div>
+                        <div id="waiting-status" class="status status--warning mt-8">في انتظار الفريق الآخر...</div>
+                    </div>
+                </div>
+                
+                <button id="btn-start-game" class="btn btn--primary btn--lg btn--full-width">بدء اللعبة</button>
+            </div>
+        </section>
+
+        <!-- شاشة اللعبة -->
+        <section id="game-screen" class="screen hidden flex flex-col gap-16 items-center">
+            <div class="game-header card" style="width:100%;max-width:640px">
+                <div class="card__body">
+                    <div class="flex justify-between items-center mb-8">
+                        <div class="status status--info" id="team1-display">فريقك: 0</div>
+                        <div class="game-round-info">
+                            <span id="current-round">الجولة 1</span>
+                        </div>
+                        <div class="status status--info" id="team2-display">الفريق الآخر: 0</div>
+                    </div>
+                    
+                    <div class="current-turn-info text-center">
+                        <h3 id="turn-indicator">دورك الآن!</h3>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="movie-display card" style="width:100%;max-width:640px">
+                <div class="card__body text-center">
+                    <div class="movie-title">
+                        <h2 id="current-movie">اضغط "ابدأ دوري" لرؤية الفيلم</h2>
+                    </div>
+                    
+                    <div class="timer-display mt-8">
+                        <div id="timer-circle" class="timer-circle">
+                            <span id="timer-text">00:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="game-controls flex gap-16">
+                <button id="btn-start-turn" class="btn btn--primary btn--lg">ابدأ دوري</button>
+                <button id="btn-correct-answer" class="btn btn--success btn--lg hidden">إجابة صحيحة ✅</button>
+                <button id="btn-wrong-answer" class="btn btn--outline btn--lg hidden">إجابة خاطئة ❌</button>
+                <button id="btn-new-movie" class="btn btn--secondary btn--lg hidden">فيلم جديد 🔄</button>
+            </div>
+        </section>
+
+        <!-- شاشة النتائج -->
+        <section id="results-screen" class="screen hidden flex flex-col gap-16 items-center">
+            <div class="results-card card" style="max-width:480px;width:100%">
+                <div class="card__body text-center">
+                    <h2 id="game-result">نتيجة اللعبة</h2>
+                    
+                    <div class="final-scores flex justify-between gap-16 mt-8">
+                        <div class="team-score">
+                            <h3 id="final-team1-name">فريقك</h3>
+                            <div class="score-circle">
+                                <span id="final-team1-score">0</span>
+                            </div>
+                        </div>
+                        <div class="team-score">
+                            <h3 id="final-team2-name">الفريق الآخر</h3>
+                            <div class="score-circle">
+                                <span id="final-team2-score">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="winner-announcement mt-8">
+                        <h3 id="winner-text">تعادل!</h3>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="results-actions flex gap-16">
+                <button id="btn-play-again" class="btn btn--primary btn--lg">لعب مرة أخرى</button>
+                <button id="btn-main-menu" class="btn btn--outline btn--lg">القائمة الرئيسية</button>
+            </div>
+        </section>
+
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="loading-overlay hidden">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p id="loading-text">جاري التحميل...</p>
+            </div>
+        </div>
+
+    </main>
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyC32yf-Y9tplEf6oGK7VNFT1YxHQeqyNjs",
+  authDomain: "films-c5fcd.firebaseapp.com",
+  projectId: "films-c5fcd",
+  storageBucket: "films-c5fcd.firebasestorage.app",
+  messagingSenderId: "430954203672",
+  appId: "1:430954203672:web:084393e865db89d8a5d16d",
+  measurementId: "G-ZP3DV6DHN3"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app); 
+    <script type="module" src="app.js"></script>
+</body>
+</html>
